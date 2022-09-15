@@ -2,7 +2,15 @@ from flask import Flask, jsonify, request
 from pymongo import MongoClient
 import bcrypt
 
+from flask_jwt_extended import create_access_token
+from flask_jwt_extended import get_jwt_identity
+from flask_jwt_extended import jwt_required
+from flask_jwt_extended import JWTManager
+
 app = Flask(__name__)
+# Setup the Flask-JWT-Extended extension
+app.config["JWT_SECRET_KEY"] = "this-is-a-mission"
+jwt = JWTManager(app)
 
 try:
     client = MongoClient('mongodb://localhost:27017/')
@@ -17,12 +25,12 @@ users = db.users
 # routes
 @app.route("/", methods=['GET'])
 def home():
-    return "hello world"
+    return "kiddoread home"
 
 @app.route("/register", methods=['GET', 'POST'])
 def register_user():
     if request.method == 'GET':
-        return "";
+        return "register user";
     else:
         name = request.form.get('name')
         email = request.form.get('email')
@@ -40,16 +48,32 @@ def register_user():
         user_input = {'name': name, 'email': email, 'password': hash_password}
 
         users.insert_one(user_input)
-        return "record inserted"
+        return "user register"
 
 
 @app.route("/login", methods=['GET', 'POST'])
 def login_user():
-    return ""
+    if request.method == 'GET':
+        return "login user"
+    else:
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        #validations
+        if password != "password":
+            return "Invalid user"
+        
+        access_token = create_access_token(identity=email)
+        return jsonify(access_token=access_token)
 
 @app.route("/question", methods=['GET', 'POST'])
+@jwt_required()
 def question():
-    return ""
+    if request.method == 'GET':
+        return "Get question"
+    else:
+        return ""
+
 
 if __name__ == '__main__':
     app.run(debug=True)
