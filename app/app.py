@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request,redirect, url_for
 from pymongo import MongoClient
 from flask_bcrypt import Bcrypt
+from flask_cors import CORS, cross_origin
 
 from flask_jwt_extended import create_access_token
 from flask_jwt_extended import set_access_cookies
@@ -14,10 +15,13 @@ import json
 import pymongo
 
 app = Flask(__name__)
+
+CORS(app, support_credentials=True)
 # Setup the Flask-JWT-Extended extension
 app.config["JWT_SECRET_KEY"] = "this-is-a-mission"
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
+
 
 try:
     client = MongoClient('mongodb://localhost:27017/')
@@ -35,8 +39,9 @@ history = db.history
 
 # routes
 @app.route("/", methods=['GET'])
+@cross_origin(supports_credentials=True)
 def home():
-    return "kiddoread home"
+    return jsonify({"message": "This is a message from flask app"}), 200
 
 @app.route("/register", methods=['GET', 'POST'])
 def register_user():
