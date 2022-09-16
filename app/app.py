@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request,redirect, url_for
 from pymongo import MongoClient
 from flask_bcrypt import Bcrypt
 
@@ -26,11 +26,12 @@ except:
     exit(1)
 
 # db and collections
-db = client.kiddoread_db
+db = client.kiddoreadDB
 
-#user collection
 users = db.users
-questions_collection = db.questions
+questions = db.questions
+gameState = db.gameState
+history = db.history
 
 # routes
 @app.route("/", methods=['GET'])
@@ -61,8 +62,10 @@ def register_user():
         user_input = {'name': name, 'email': email, 'password': hash_password}
 
         users.insert_one(user_input)
-        return "user register"
 
+        #Also update gameState table
+        gameState.insert_one({'email':email, 'nextQuestionId':1, 'score':0})
+        return "user register"
 
 @app.route("/login", methods=['GET', 'POST'])
 def login_user():
@@ -97,41 +100,81 @@ def logout_user():
 @app.route("/question", methods=['GET', 'POST'])
 @jwt_required()
 def question():
+    global questions
     if request.method == 'GET':
-        return "Get question, restricted"
+        #get emailid
+        email = get_jwt_identity()
+        #get gameState record
+        state = gameState.find_one({'email':email})        
+        #get question
+        next_question_id = state['nextQuestionId']
+
+        questionRecord = questions.find_one({'id':next_question_id})
+        score = state['score']
+
+        if not questionRecord:
+            return "No question to return"
+
+        return jsonify({'email':email, 'score':state['score'], 'question':questionRecord['question']})
     else:
-        return "Update question, restricted"
+        data = json.loads(request.data)
+        
+        email = get_jwt_identity()
+        question = data['question']
+        answer = data['answer']
+
+        state = gameState.find_one({'email':email})
+        score = state['score']
+
+        #update score
+        if question == answer:
+            score += 5
+
+        curr_question_id =  state['nextQuestionId']
+        next_question_id = curr_question_id + 1
+        gameState.update_one({'email':email}, { "$set": { 'nextQuestionId': next_question_id, 'score':score } })
+        history.insert_one({'email':email, 'questionId':curr_question_id, 'question':question, 'answer':answer})
+
+        return redirect(url_for('question'))
 
 @app.route("/questionDB", methods=['GET', 'POST'])
 @jwt_required()
 def dump_questions():
+    global questions
     if request.method == 'GET':
-        questions = questions_collection.find({})
+        questions = questions.find({})
         for q in questions:
             print(q)
         return "questions read"
     else:
-
         try:
-            db.validate_collection("questions_collection")  # Try to validate a collection
+            db.validate_collection("questions")  # Try to validate a collection
             return "QuestionDB already populated"
         except pymongo.errors.OperationFailure:  # If the collection doesn't exist
             #populate questions
             i = 0
-            questions = ['phone', 'door', 'fan', 'road','car']
-            for ques in questions:
+            words = ['phone', 'door', 'fan', 'road','car']
+            for word in words:
                 i += 1
-                questions_collection.insert_one({'id':i,'question':ques})
+                questions.insert_one({'id':i,'question':word})
             
-            return "Questions inserted"
+            return "Questions created"
 
         return ""
 
 @app.route("/clearQuestionDB", methods=['POST'])
 @jwt_required()
 def clear_questions():
-    questions_collection.delete_many({})
-    return "Question DB cleared"
+    questions.delete_many({})
+    return "Question cleared"
+
+
+@app.route("/clearAll", methods=['POST'])
+@jwt_required()
+def clear_all():
+    users.delete_many({})
+    questions.delete_many({})
+    return "All cleared"
 
 if __name__ == '__main__':
     app.run(debug=True)
