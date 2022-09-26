@@ -1,3 +1,5 @@
 # kiddoread
-A simple web application
-Uses python flask, mongo, react, docker
+A simple web application using
+python flask
+reactjs
+mongodb

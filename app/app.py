@@ -49,8 +49,6 @@ def register_user():
         return "register user";
     else:
         data = json.loads(request.data)
-
-        name = data['name']
         email = data['email']
         password = data['password']
 
@@ -64,7 +62,7 @@ def register_user():
         hash_password = bcrypt.generate_password_hash(password)
 
         #validate input
-        user_input = {'name': name, 'email': email, 'password': hash_password}
+        user_input = {'email': email, 'password': hash_password}
 
         users.insert_one(user_input)
 
@@ -118,7 +116,7 @@ def question():
         score = state['score']
 
         if not questionRecord:
-            return "No question to return"
+            return jsonify({'email':email, 'score':state['score'], 'gameOver':True})
 
         return jsonify({'email':email, 'score':state['score'], 'question':questionRecord['question']})
     else:
@@ -132,9 +130,12 @@ def question():
         score = state['score']
 
         #update score
+        print(question)
+        print(answer)
         if question == answer:
             score += 5
-
+            
+        print(score)
         curr_question_id =  state['nextQuestionId']
         next_question_id = curr_question_id + 1
         gameState.update_one({'email':email}, { "$set": { 'nextQuestionId': next_question_id, 'score':score } })

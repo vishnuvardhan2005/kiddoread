@@ -2,31 +2,32 @@ import logo from './logo.svg';
 import './App.css';
 import React, { useEffect, useState } from 'react';
 import axios from 'axios'
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
+
+import Login from './components/Login'
+import Question from './components/Question'
+import Header from './components/Header'
+import useToken from './components/useToken'
+import Register from "./components/Register";
+import MyNavbar from "./components/Navbar"
+import Home from './components/Home';
 
 function App() {
-  const [getMessage, setGetMessage] = useState({})
+  const { token, removeToken, setToken } = useToken();
 
-  useEffect(()=>{
-    axios.get('http://localhost:5000/').then(response => {
-      console.log("SUCCESS", response)
-      setGetMessage(response)
-    }).catch(error => {
-      console.log(error)
-    })
-
-  }, [])
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>React + Flask Tutorial</p>
-        <div>{getMessage.status === 200 ? 
-          <h3>{getMessage.data.message}</h3>
-          :
-          <h3>LOADING</h3>}</div>
-      </header>
-    </div>
+    <Router>
+      <div>
+        <MyNavbar />
+        <Routes>
+          <Route exact path='/' element={<Home />} />
+          <Route exact path='/home' element={<Home />} />
+          <Route exact path='/register' element={<Register />} />
+          <Route exact path='/login' element={<Login setToken={setToken} />} />
+          <Route exact path='/question' element={<Question token={token} />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
-
 export default App;
